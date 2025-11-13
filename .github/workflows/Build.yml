@@ -1,4 +1,4 @@
-name: Build
+name: Build with Gradle
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
@@ -19,7 +19,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Cache Gradle
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.14'
+
+      - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -29,23 +34,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
+      - name: Build with Gradle (no wrapper)
+        run: gradle clean build
 
-      - name: Build with Gradle
-        run: ./gradlew clean build --no-daemon
-
-      - name: List build artifacts (for debugging)
+      - name: List build artifacts
         run: ls -l build/libs/
 
-      - name: Get final jar name
+      - name: Get Jar filename
         id: jar
         run: |
           JAR_FILE=$(find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*.jar.original" | head -n 1)
-          JAR_NAME=$(basename "$JAR_FILE")
-          echo "jar=$JAR_NAME" >> $GITHUB_OUTPUT
+          echo "jar=$(basename "$JAR_FILE")" >> $GITHUB_OUTPUT
 
-      - name: Upload Artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: RayTraceAntiXray
